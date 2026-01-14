@@ -50,12 +50,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       }
 
       // 프로필 업데이트
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          username: username || null,
-          full_name: fullName || null,
-        })
+      const updateData = {
+        username: username || null,
+        full_name: fullName || null,
+      };
+      
+      const { error: updateError } = await (supabase
+        .from("profiles") as any)
+        .update(updateData as any)
         .eq("id", user.id);
 
       if (updateError) throw updateError;

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Header } from "@/components/Header";
 import { RecipeEditForm } from "@/components/recipes/RecipeEditForm";
+import type { Database } from "@/types/database";
 
 export default async function EditRecipePage({
   params,
@@ -26,7 +27,10 @@ export default async function EditRecipePage({
     .from("recipes")
     .select("*")
     .eq("id", id)
-    .single();
+    .single() as {
+      data: Database["public"]["Tables"]["recipes"]["Row"] | null;
+      error: any;
+    };
 
   if (error || !recipe) {
     notFound();

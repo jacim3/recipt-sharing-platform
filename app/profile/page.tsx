@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Header } from "@/components/Header";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import type { Database } from "@/types/database";
 
 export default async function ProfilePage() {
   // 로그인 상태 확인
@@ -21,20 +22,28 @@ export default async function ProfilePage() {
     .from("profiles")
     .select("*")
     .eq("id", session.user.id)
-    .single();
+    .single() as { data: Database["public"]["Tables"]["profiles"]["Row"] | null; error: any };
 
   // 프로필이 없으면 생성 (트리거가 작동하지 않은 경우 대비)
   if (error || !profile) {
     // 프로필이 없으면 기본값으로 생성
-    const { data: newProfile } = await supabase
+    // 타입 단언을 사용하여 Supabase 클라이언트의 타입 추론 문제 해결
+    const insertData = {
+      id: session.user.id,
+      username: session.user.email?.split("@")[0] || null,
+      full_name: null,
+    };
+    
+    const { data: newProfile, error: insertError } = await (supabase
       .from("profiles")
-      .insert({
-        id: session.user.id,
-        username: session.user.email?.split("@")[0] || null,
-        full_name: null,
-      })
+      .insert(insertData as any)
       .select()
-      .single();
+      .single() as any);
+
+    if (insertError || !newProfile) {
+      // 프로필 생성 실패 시에도 페이지는 표시 (에러는 무시)
+      console.error("프로필 생성 실패:", insertError);
+    }
 
     if (newProfile) {
       return (
@@ -80,7 +89,7 @@ export default async function ProfilePage() {
             </div>
           </div>
 
-          <ProfileForm profile={profile} />
+          {profile && <ProfileForm profile={profile} />}
         </div>
       </div>
     </div>

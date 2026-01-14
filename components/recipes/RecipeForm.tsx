@@ -56,19 +56,21 @@ export function RecipeForm() {
       }
 
       // 레시피 생성
-      const { data, error: insertError } = await supabase
-        .from("recipes")
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          ingredients: ingredients.trim(),
-          instructions: instructions.trim(),
-          cooking_time: cookingTime ? Number(cookingTime) : null,
-          difficulty: difficulty || null,
-          category: category || null,
-        })
+      const insertData = {
+        user_id: user.id,
+        title: title.trim(),
+        ingredients: ingredients.trim(),
+        instructions: instructions.trim(),
+        cooking_time: cookingTime ? Number(cookingTime) : null,
+        difficulty: difficulty || null,
+        category: category || null,
+      };
+      
+      const { data, error: insertError } = await ((supabase
+        .from("recipes") as any)
+        .insert(insertData as any)
         .select()
-        .single();
+        .single() as any);
 
       if (insertError) throw insertError;
 

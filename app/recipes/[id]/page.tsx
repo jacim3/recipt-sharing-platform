@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Header } from "@/components/Header";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
+import type { Database } from "@/types/database";
 
 export default async function RecipeDetailPage({
   params,
@@ -17,7 +18,7 @@ export default async function RecipeDetailPage({
   let profile: any = null;
 
   // 1) FK가 설정돼 있으면 조인으로 한 번에 가져오기
-  const joined = await supabase
+  const joined = (await supabase
     .from("recipes")
     .select(
       `
@@ -29,7 +30,7 @@ export default async function RecipeDetailPage({
     `
     )
     .eq("id", id)
-    .single();
+    .single()) as any;
 
   if (!joined.error && joined.data) {
     recipe = joined.data;
@@ -39,20 +40,26 @@ export default async function RecipeDetailPage({
   } else {
     // 2) FK/스키마 캐시 문제면 조인 없이 가져오고 profile을 따로 조회
     if (joined.error?.code === "PGRST200" || joined.error) {
-      const plain = await supabase
+      const plain = (await supabase
         .from("recipes")
         .select("*")
         .eq("id", id)
-        .single();
+        .single()) as {
+        data: Database["public"]["Tables"]["recipes"]["Row"] | null;
+        error: any;
+      };
 
       if (!plain.error && plain.data) {
         recipe = plain.data;
 
-        const profileRes = await supabase
+        const profileRes = (await supabase
           .from("profiles")
           .select("username,full_name")
           .eq("id", recipe.user_id)
-          .single();
+          .single()) as {
+          data: Database["public"]["Tables"]["profiles"]["Row"] | null;
+          error: any;
+        };
 
         if (!profileRes.error && profileRes.data) {
           profile = profileRes.data;

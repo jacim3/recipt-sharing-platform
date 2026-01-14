@@ -109,3 +109,23 @@ SELECT column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'recipes';
 ```
+
+## ⚠️ 조인 오류(PGRST200) 해결
+
+`recipes`와 `profiles`를 조인하려면 `recipes.user_id` → `profiles.id` 외래키(FK)가 필요합니다.
+
+이미 테이블을 만든 상태라면, Supabase **SQL Editor**에서 아래 SQL을 실행하세요(기존 FK를 profiles로 교체):
+
+```sql
+-- 기존 recipes.user_id FK 제거(이름이 다르면 Supabase Table Editor에서 constraint 이름 확인 후 수정)
+ALTER TABLE recipes DROP CONSTRAINT IF EXISTS recipes_user_id_fkey;
+
+-- profiles로 FK 다시 생성
+ALTER TABLE recipes
+  ADD CONSTRAINT recipes_user_id_fkey
+  FOREIGN KEY (user_id)
+  REFERENCES profiles(id)
+  ON DELETE CASCADE;
+```
+
+그 다음 페이지를 새로고침하면 `profiles!recipes_user_id_fkey(...)` 조인이 정상 동작합니다.

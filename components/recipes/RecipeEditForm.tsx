@@ -75,16 +75,18 @@ export function RecipeEditForm({ recipe }: { recipe: Recipe }) {
       }
 
       // 레시피 업데이트
-      const { error: updateError } = await supabase
-        .from("recipes")
-        .update({
-          title: title.trim(),
-          ingredients: ingredients.trim(),
-          instructions: instructions.trim(),
-          cooking_time: cookingTime ? Number(cookingTime) : null,
-          difficulty: difficulty || null,
-          category: category || null,
-        })
+      const updateData = {
+        title: title.trim(),
+        ingredients: ingredients.trim(),
+        instructions: instructions.trim(),
+        cooking_time: cookingTime ? Number(cookingTime) : null,
+        difficulty: difficulty || null,
+        category: category || null,
+      };
+      
+      const { error: updateError } = await (supabase
+        .from("recipes") as any)
+        .update(updateData as any)
         .eq("id", recipe.id);
 
       if (updateError) throw updateError;
