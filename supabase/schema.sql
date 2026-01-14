@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS recipes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID NOT NULL,
   title TEXT NOT NULL,
   ingredients TEXT NOT NULL, -- JSON 문자열 또는 텍스트로 저장
   instructions TEXT NOT NULL, -- JSON 문자열 또는 텍스트로 저장
@@ -24,6 +24,15 @@ CREATE TABLE IF NOT EXISTS recipes (
   difficulty TEXT CHECK (difficulty IN ('쉬움', '보통', '어려움')),
   category TEXT -- 카테고리 (예: '한식', '양식', '중식' 등)
 );
+
+-- recipes.user_id -> profiles.id 관계 (PostgREST 조인용)
+-- NOTE: constraint 이름을 recipes_user_id_fkey 로 맞춰서
+-- `profiles!recipes_user_id_fkey(...)` 형태의 select 힌트가 동작하게 합니다.
+ALTER TABLE recipes
+  ADD CONSTRAINT recipes_user_id_fkey
+  FOREIGN KEY (user_id)
+  REFERENCES profiles(id)
+  ON DELETE CASCADE;
 
 -- ============================================
 -- 인덱스 생성 (성능 최적화)
@@ -89,3 +98,28 @@ CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 프로필 자동 생성 트리거 (회원가입 시)
+-- ============================================
+
+-- 회원가입 시 profile 테이블에 자동으로 레코드 생성
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, full_name)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NULL)
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- auth.users에 새 사용자가 생성될 때 트리거
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();

@@ -88,5 +88,5 @@ export type Recipe = Database['public']['Tables']['recipes']['Row']
 
 // 레시피와 작성자 프로필을 함께 가져올 때 사용할 타입
 export type RecipeWithProfile = Recipe & {
-  profiles: Profile
+  profile: Profile
 }
